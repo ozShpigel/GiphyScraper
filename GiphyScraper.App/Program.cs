@@ -1,5 +1,6 @@
-﻿using System.Net.Http.Json;
+﻿using System.Diagnostics;
 using GiphyScraper.Core.Services;
+using Microsoft.Extensions.Caching.Memory;
 
 var apiKey = Environment.GetEnvironmentVariable("GIPHY_API_KEY");
 if (string.IsNullOrWhiteSpace(apiKey))
@@ -9,29 +10,46 @@ if (string.IsNullOrWhiteSpace(apiKey))
 }
 
 using var http = new HttpClient();
-IGiphyClient giphy = new GiphyClient(http, apiKey);
+using var cache = new MemoryCache(new MemoryCacheOptions());
+IGiphyClient giphy = new CachedGiphyClient(new GiphyClient(http, apiKey), cache, TimeSpan.FromMinutes(5));
 
-try
+Console.WriteLine("Type a search term, 'trending', or 'exit'.");
+
+while (true)
 {
-    var urls = args.Length == 0
-        ? await giphy.GetTrendingUrlsAsync()
-        : await giphy.SearchUrlsAsync(string.Join(" ", args));
+    Console.Write("> ");
+    var input = Console.ReadLine()?.Trim();
 
-    if (urls.Count == 0)
-        Console.WriteLine("No GIFs found.");
+    if (input is null || input.Equals("exit", StringComparison.OrdinalIgnoreCase))
+        break;
 
-    foreach (var url in urls)
-        Console.WriteLine(url);
+    if (input.Length == 0)
+        continue;
 
-    return 0;
+    try
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        var urls = input.Equals("trending", StringComparison.OrdinalIgnoreCase)
+            ? await giphy.GetTrendingUrlsAsync()
+            : await giphy.SearchUrlsAsync(input);
+
+        if (urls.Count == 0)
+            Console.WriteLine("No GIFs found.");
+
+        foreach (var url in urls)
+            Console.WriteLine(url);
+
+        Console.WriteLine($"{urls.Count} results in {stopwatch.ElapsedMilliseconds} ms");
+    }
+    catch (ArgumentException ex)
+    {
+        Console.Error.WriteLine($"Invalid input: {ex.Message}");
+    }
+    catch (HttpRequestException ex)
+    {
+        Console.Error.WriteLine($"Giphy request failed: {ex.Message}");
+    }
 }
-catch (ArgumentException ex)
-{
-    Console.Error.WriteLine($"Invalid input: {ex.Message}");
-    return 1;
-}
-catch (HttpRequestException ex)
-{
-    Console.Error.WriteLine($"Giphy request failed: {ex.Message}");
-    return 1;
-}
+
+return 0;
