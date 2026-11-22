@@ -1,7 +1,9 @@
+using GiphyScraper.Core.Models;
+
 namespace GiphyScraper.Core.Services;
 
 public interface IGiphyClient
 {
-    Task<IReadOnlyList<string>> GetTrendingUrlsAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<string>> SearchUrlsAsync(string term, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GifResult>> GetTrendingUrlsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GifResult>> SearchUrlsAsync(string term, CancellationToken cancellationToken = default);
 }

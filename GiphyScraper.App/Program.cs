@@ -41,17 +41,17 @@ while (true)
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var urls = input.Equals("trending", StringComparison.OrdinalIgnoreCase)
+        var gifs = input.Equals("trending", StringComparison.OrdinalIgnoreCase)
             ? await giphy.GetTrendingUrlsAsync()
             : await giphy.SearchUrlsAsync(input);
 
-        if (urls.Count == 0)
+        if (gifs.Count == 0)
             Console.WriteLine("No GIFs found.");
 
-        foreach (var url in urls)
-            Console.WriteLine(url);
+        foreach (var gif in gifs)
+            Console.WriteLine(gif.Url);
 
-        Console.WriteLine($"{urls.Count} results in {stopwatch.ElapsedMilliseconds} ms");
+        Console.WriteLine($"{gifs.Count} results in {stopwatch.ElapsedMilliseconds} ms");
     }
     catch (ArgumentException ex)
     {

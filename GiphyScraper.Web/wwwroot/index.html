@@ -12,7 +12,8 @@
     button { padding: 8px 16px; font-size: 1rem; cursor: pointer; }
     #status { color: #666; margin-bottom: 8px; }
     #status.error { color: #c00; }
-    li { margin: 4px 0; word-break: break-all; }
+    #results { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    #results img { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; display: block; }
   </style>
 </head>
 <body>
@@ -25,7 +26,7 @@
   </form>
 
   <div id="status"></div>
-  <ul id="results"></ul>
+  <div id="results"></div>
 
   <script>
     const form = document.getElementById('search-form');
@@ -43,20 +44,23 @@
         const response = await fetch(url);
         if (!response.ok) throw new Error(await response.text());
 
-        const urls = await response.json();
+        const gifs = await response.json();
         const ms = Math.round(performance.now() - start);
-        statusEl.textContent = urls.length ? `${urls.length} results in ${ms} ms` : 'No GIFs found.';
+        statusEl.textContent = gifs.length ? `${gifs.length} results in ${ms} ms` : 'No GIFs found.';
 
-        for (const gifUrl of urls) {
+        for (const gif of gifs) {
+          const image = document.createElement('img');
+          image.src = gif.previewUrl;
+          image.alt = 'GIF';
+          image.loading = 'lazy';
+
           const link = document.createElement('a');
-          link.href = gifUrl;
-          link.textContent = gifUrl;
+          link.href = gif.url;
           link.target = '_blank';
           link.rel = 'noopener';
+          link.append(image);
 
-          const item = document.createElement('li');
-          item.append(link);
-          resultsEl.append(item);
+          resultsEl.append(link);
         }
       } catch (error) {
         statusEl.className = 'error';

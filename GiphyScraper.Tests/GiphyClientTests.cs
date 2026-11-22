@@ -8,7 +8,7 @@ namespace GiphyScraper.Tests;
 public class GiphyClientTests
 {
     private const string ResponseJson =
-        """{"data":[{"url":"https://giphy.com/gifs/a"},{"url":"https://giphy.com/gifs/b"}]}""";
+        """{"data":[{"url":"https://giphy.com/gifs/a","images":{"fixed_width":{"url":"https://media.giphy.com/a.gif"}}}]}""";
 
     private readonly FakeHttpMessageHandler _handler = new(ResponseJson);
     private readonly GiphyClient _client;
@@ -21,11 +21,13 @@ public class GiphyClientTests
     }
 
     [Fact]
-    public async Task GetTrendingUrlsAsync_ReturnsUrlsFromResponse()
+    public async Task GetTrendingUrlsAsync_ReturnsGifsFromResponse()
     {
-        var urls = await _client.GetTrendingUrlsAsync();
+        var gifs = await _client.GetTrendingUrlsAsync();
 
-        Assert.Equal(new[] { "https://giphy.com/gifs/a", "https://giphy.com/gifs/b" }, urls);
+        var gif = Assert.Single(gifs);
+        Assert.Equal("https://giphy.com/gifs/a", gif.Url);
+        Assert.Equal("https://media.giphy.com/a.gif", gif.PreviewUrl);
     }
 
     [Fact]

@@ -10,10 +10,10 @@ public class GiphyClient(HttpClient http, IOptions<GiphyOptions> options) : IGip
     private const int MaxSearchTermLength = 50;
     private readonly string _apiKey = options.Value.ApiKey;
 
-    public Task<IReadOnlyList<string>> GetTrendingUrlsAsync(CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<GifResult>> GetTrendingUrlsAsync(CancellationToken cancellationToken = default) =>
         GetUrlsAsync($"trending?api_key={_apiKey}", cancellationToken);
 
-    public Task<IReadOnlyList<string>> SearchUrlsAsync(string term, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<GifResult>> SearchUrlsAsync(string term, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(term);
 
@@ -23,9 +23,11 @@ public class GiphyClient(HttpClient http, IOptions<GiphyOptions> options) : IGip
         return GetUrlsAsync($"search?api_key={_apiKey}&q={Uri.EscapeDataString(term)}", cancellationToken);
     }
 
-    private async Task<IReadOnlyList<string>> GetUrlsAsync(string relativeUrl, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<GifResult>> GetUrlsAsync(string relativeUrl, CancellationToken cancellationToken)
     {
         var response = await http.GetFromJsonAsync<GiphyResponse>(relativeUrl, cancellationToken);
-        return response?.Data.Select(gif => gif.Url).ToList() ?? [];
+        return response?.Data
+            .Select(gif => new GifResult(gif.Url, gif.Images?.FixedWidth?.Url ?? string.Empty))
+            .ToList() ?? [];
     }
 }

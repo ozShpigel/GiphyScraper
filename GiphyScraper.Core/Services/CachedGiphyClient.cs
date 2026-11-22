@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using GiphyScraper.Core.Models;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace GiphyScraper.Core.Services;
@@ -8,17 +9,17 @@ public class CachedGiphyClient(IGiphyClient inner, IMemoryCache cache, TimeSpan 
 {
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
 
-    public Task<IReadOnlyList<string>> GetTrendingUrlsAsync(CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<GifResult>> GetTrendingUrlsAsync(CancellationToken cancellationToken = default) =>
         GetOrFetchAsync("trending", () => inner.GetTrendingUrlsAsync(cancellationToken), cancellationToken);
 
-    public Task<IReadOnlyList<string>> SearchUrlsAsync(string term, CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<GifResult>> SearchUrlsAsync(string term, CancellationToken cancellationToken = default) =>
         GetOrFetchAsync(
             $"search:{term?.Trim().ToLowerInvariant()}",
             () => inner.SearchUrlsAsync(term!, cancellationToken),
             cancellationToken);
 
-    private async Task<IReadOnlyList<string>> GetOrFetchAsync(
-        string key, Func<Task<IReadOnlyList<string>>> fetch, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<GifResult>> GetOrFetchAsync(
+        string key, Func<Task<IReadOnlyList<GifResult>>> fetch, CancellationToken cancellationToken)
     {
         if (TryGetCached(key, out var cached))
             return cached;
@@ -40,6 +41,6 @@ public class CachedGiphyClient(IGiphyClient inner, IMemoryCache cache, TimeSpan 
         }
     }
 
-    private bool TryGetCached(string key, [NotNullWhen(true)] out IReadOnlyList<string>? value) =>
+    private bool TryGetCached(string key, [NotNullWhen(true)] out IReadOnlyList<GifResult>? value) =>
         cache.TryGetValue(key, out value) && value is not null;
 }
