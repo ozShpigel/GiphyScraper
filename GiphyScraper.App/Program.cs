@@ -23,14 +23,17 @@ if (string.IsNullOrWhiteSpace(giphySection["ApiKey"]))
 builder.Services.Configure<GiphyOptions>(giphySection);
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<GiphyClient>((services, client) =>
-    client.BaseAddress = new Uri(services.GetRequiredService<IOptions<GiphyOptions>>().Value.BaseUrl));
-builder.Services.AddTransient<IGiphyClient>(services => new CachedGiphyClient(
+        client.BaseAddress = new Uri(services.GetRequiredService<IOptions<GiphyOptions>>().Value.BaseUrl))
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) })
+    .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
+builder.Services.AddSingleton<IGiphyClient>(services => new CachedGiphyClient(
     services.GetRequiredService<GiphyClient>(),
     services.GetRequiredService<IMemoryCache>(),
     services.GetRequiredService<IOptions<GiphyOptions>>().Value.CacheDuration));
 
 using var host = builder.Build();
 var giphy = host.Services.GetRequiredService<IGiphyClient>();
+_ = giphy.GetTrendingUrlsAsync(); // Warm up the cache in the background
 
 Console.WriteLine("Type a search term, 'trending', or 'exit'.");
 

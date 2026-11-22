@@ -50,4 +50,14 @@ public class CachedGiphyClientTests
 
         Assert.Equal(2, _inner.CallCount);
     }
+
+    [Fact]
+    public async Task SearchUrlsAsync_ConcurrentRequestsForSameTerm_CallsApiOnce()
+    {
+        var requests = Enumerable.Range(0, 10).Select(_ => _client.SearchUrlsAsync("cats"));
+
+        await Task.WhenAll(requests);
+
+        Assert.Equal(1, _inner.CallCount);
+    }    
 }

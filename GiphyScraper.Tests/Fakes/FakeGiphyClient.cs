@@ -4,17 +4,20 @@ namespace GiphyScraper.Tests.Fakes;
 
 public class FakeGiphyClient : IGiphyClient
 {
-    public int CallCount { get; private set; }
+    private int _callCount;
+    public int CallCount => _callCount;
 
-    public Task<IReadOnlyList<string>> GetTrendingUrlsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> GetTrendingUrlsAsync(CancellationToken cancellationToken = default)
     {
-        CallCount++;
-        return Task.FromResult<IReadOnlyList<string>>(["trending"]);
+        Interlocked.Increment(ref _callCount);
+        await Task.Delay(50, cancellationToken);
+        return ["trending"];
     }
 
-    public Task<IReadOnlyList<string>> SearchUrlsAsync(string term, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> SearchUrlsAsync(string term, CancellationToken cancellationToken = default)
     {
-        CallCount++;
-        return Task.FromResult<IReadOnlyList<string>>([term]);
+        Interlocked.Increment(ref _callCount);
+        await Task.Delay(50, cancellationToken);
+        return [term];
     }
 }
