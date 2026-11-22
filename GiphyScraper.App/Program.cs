@@ -1,17 +1,36 @@
 ﻿using System.Diagnostics;
+using GiphyScraper.Core.Configuration;
 using GiphyScraper.Core.Services;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
-var apiKey = Environment.GetEnvironmentVariable("GIPHY_API_KEY");
-if (string.IsNullOrWhiteSpace(apiKey))
+var builder = Host.CreateApplicationBuilder(args);
+builder.Configuration.AddUserSecrets<Program>();
+builder.Logging.ClearProviders();
+
+var giphySection = builder.Configuration.GetSection(GiphyOptions.SectionName);
+if (string.IsNullOrWhiteSpace(giphySection["ApiKey"]))
 {
-    Console.Error.WriteLine("Error: GIPHY_API_KEY environment variable is not set.");
+    Console.Error.WriteLine("Error: Giphy:ApiKey is not configured.");
+    Console.Error.WriteLine("Run: dotnet user-secrets set \"Giphy:ApiKey\" \"<your-key>\" --project GiphyScraper.App");
     return 1;
 }
 
-using var http = new HttpClient();
-using var cache = new MemoryCache(new MemoryCacheOptions());
-IGiphyClient giphy = new CachedGiphyClient(new GiphyClient(http, apiKey), cache, TimeSpan.FromMinutes(5));
+builder.Services.Configure<GiphyOptions>(giphySection);
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<GiphyClient>((services, client) =>
+    client.BaseAddress = new Uri(services.GetRequiredService<IOptions<GiphyOptions>>().Value.BaseUrl));
+builder.Services.AddTransient<IGiphyClient>(services => new CachedGiphyClient(
+    services.GetRequiredService<GiphyClient>(),
+    services.GetRequiredService<IMemoryCache>(),
+    services.GetRequiredService<IOptions<GiphyOptions>>().Value.CacheDuration));
+
+using var host = builder.Build();
+var giphy = host.Services.GetRequiredService<IGiphyClient>();
 
 Console.WriteLine("Type a search term, 'trending', or 'exit'.");
 
