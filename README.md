@@ -7,7 +7,7 @@ Fetches GIF URLs from the [Giphy API](https://developers.giphy.com/) — trendin
 ## Features
 
 - Trending GIFs and search by term
-- In-memory cache (5 min) to prevent redundant API calls
+- In-memory cache (24h) to prevent redundant API calls
 - Safe concurrent access — parallel requests for the same term trigger a single API call
 - Console app and web UI with a GIF gallery
 
@@ -45,3 +45,13 @@ dotnet test
 - **Per-key locking** — `SemaphoreSlim` per cache key with double-checked locking prevents cache stampede.
 - **Shared registration** — `AddGiphyClient()` registers everything once for both apps.
 - **Trending "of the day"** — the trending endpoint returns the current feed. The `trending_datetime` field reflects when a GIF first trended, so it is not used for filtering.
+
+
+## Possible Improvements
+
+- **Distributed cache** — `IMemoryCache` is per-process; with multiple instances, replace it with Redis (`IDistributedCache`) behind the same decorator.
+- **Cache size limit** — the cache and the per-key lock dictionary grow with each unique term; add `SizeLimit` and lock cleanup, or use a library such as FusionCache.
+- **Separate TTLs** — trending and search could use different cache durations.
+- **Error mapping in the API** — Giphy failures currently surface as HTTP 500; map them to 502 via exception-handling middleware.
+- **Pagination** — expose `limit`/`offset` to fetch beyond the first page.
+- **Naming** — `GetTrendingUrlsAsync`/`SearchUrlsAsync` now return `GifResult`; rename to `GetTrendingAsync`/`SearchAsync`.
