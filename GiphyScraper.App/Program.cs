@@ -1,35 +1,24 @@
 ﻿using System.Diagnostics;
+using GiphyScraper.Core;
 using GiphyScraper.Core.Configuration;
 using GiphyScraper.Core.Services;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Configuration.AddUserSecrets<Program>();
 builder.Logging.ClearProviders();
 
-var giphySection = builder.Configuration.GetSection(GiphyOptions.SectionName);
-if (string.IsNullOrWhiteSpace(giphySection["ApiKey"]))
+if (string.IsNullOrWhiteSpace(builder.Configuration[$"{GiphyOptions.SectionName}:ApiKey"]))
 {
     Console.Error.WriteLine("Error: Giphy:ApiKey is not configured.");
     Console.Error.WriteLine("Run: dotnet user-secrets set \"Giphy:ApiKey\" \"<your-key>\" --project GiphyScraper.App");
     return 1;
 }
 
-builder.Services.Configure<GiphyOptions>(giphySection);
-builder.Services.AddMemoryCache();
-builder.Services.AddHttpClient<GiphyClient>((services, client) =>
-        client.BaseAddress = new Uri(services.GetRequiredService<IOptions<GiphyOptions>>().Value.BaseUrl))
-    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) })
-    .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
-builder.Services.AddSingleton<IGiphyClient>(services => new CachedGiphyClient(
-    services.GetRequiredService<GiphyClient>(),
-    services.GetRequiredService<IMemoryCache>(),
-    services.GetRequiredService<IOptions<GiphyOptions>>().Value.CacheDuration));
+builder.Services.AddGiphyClient(builder.Configuration);
 
 using var host = builder.Build();
 var giphy = host.Services.GetRequiredService<IGiphyClient>();

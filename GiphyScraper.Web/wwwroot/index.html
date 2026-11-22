@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giphy Scraper</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 1.5rem; }
+    form { display: flex; gap: 8px; margin-bottom: 16px; }
+    input { flex: 1; padding: 8px; font-size: 1rem; }
+    button { padding: 8px 16px; font-size: 1rem; cursor: pointer; }
+    #status { color: #666; margin-bottom: 8px; }
+    #status.error { color: #c00; }
+    li { margin: 4px 0; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>Giphy Scraper</h1>
+
+  <form id="search-form">
+    <input id="term" placeholder="Search GIFs..." maxlength="50" autofocus>
+    <button type="submit">Search</button>
+    <button type="button" id="trending">Trending</button>
+  </form>
+
+  <div id="status"></div>
+  <ul id="results"></ul>
+
+  <script>
+    const form = document.getElementById('search-form');
+    const termInput = document.getElementById('term');
+    const statusEl = document.getElementById('status');
+    const resultsEl = document.getElementById('results');
+
+    async function load(url) {
+      statusEl.className = '';
+      statusEl.textContent = 'Loading...';
+      resultsEl.innerHTML = '';
+      const start = performance.now();
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(await response.text());
+
+        const urls = await response.json();
+        const ms = Math.round(performance.now() - start);
+        statusEl.textContent = urls.length ? `${urls.length} results in ${ms} ms` : 'No GIFs found.';
+
+        for (const gifUrl of urls) {
+          const link = document.createElement('a');
+          link.href = gifUrl;
+          link.textContent = gifUrl;
+          link.target = '_blank';
+          link.rel = 'noopener';
+
+          const item = document.createElement('li');
+          item.append(link);
+          resultsEl.append(item);
+        }
+      } catch (error) {
+        statusEl.className = 'error';
+        statusEl.textContent = `Error: ${error.message}`;
+      }
+    }
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const term = termInput.value.trim();
+      if (term) load(`/api/gifs/search?q=${encodeURIComponent(term)}`);
+    });
+
+    document.getElementById('trending').addEventListener('click', () => load('/api/gifs/trending'));
+
+    load('/api/gifs/trending');
+  </script>
+</body>
+</html>
